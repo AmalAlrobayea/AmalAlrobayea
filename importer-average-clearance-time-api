@@ -1,0 +1,342 @@
+swagger: '2.0'
+info:
+  title: Importer Average Clearance Time API
+  x-ibm-name: importer-average-clearance-time-api
+  version: 1.0.0
+  description: 'This API provides a list of Shipments and Declaration Month for specific time period and related to a particular Importer. It provides the average time taken to fully released the declarations by specific Custom Broker. E.g. Broker LicNo, Broker Name, Time, ...etc. It also provides the average time taken to fully released the shipment for specific Custom Broker. E.g. Broker LicNo, Broker Name, Shipment No, ...etc.'
+schemes:
+  - https
+basePath: /tabadul/fasahsb/api/v1/analytics/iact/importer
+security:
+  - clientID: []
+    oAuth2:
+      - IMPRT
+      - Trader
+securityDefinitions:
+  oAuth2:
+    type: oauth2
+    description: The API is restricted by oAuth2 password grant
+    flow: password
+    x-ibm-oauth-provider: fasah-sb-identity-service-oauth-provider-v3
+    tokenUrl: 'https://sapis.fasah.sa/tabadul/fasahsb/oauth2/token/v3/jwt'
+    scopes:
+      Broker: Broker
+      Fasah: Fasah
+      GATEOPERATOR: GATEOPERATOR
+      IMPRT: Importer
+      PORT_CONTRACTOR: PORT_CONTRACTOR
+      SUPERBROKER: SUPERBROKER
+      Trader: Trader
+  clientSecret:
+    type: apiKey
+    name: X-Tabadul-Client-Secret
+    in: header
+    x-key-type: client_secret
+  clientID:
+    type: apiKey
+    name: X-Tabadul-Client-Id
+    in: header
+    x-key-type: client_id
+x-ibm-configuration:
+  cors:
+    enabled: true
+  type: rest
+  phase: realized
+  enforced: true
+  testable: true
+  application-authentication:
+    certificate: false
+  servers:
+    - url: 'https://sapis.fasah.sa/tabadul/fasahsb/api/v1/analytics/iact/importer'
+      description: external sandbox for testing
+      type:
+        - Development
+definitions:
+  DefaultFailureResonse:
+    type: object
+    additionalProperties: false
+    properties:
+      httpCode:
+        type: string
+      httpMessage:
+        type: string
+      moreInformation:
+        type: string
+  AverageClearanceTimeListItem:
+    type: object
+    additionalProperties: false
+    properties:
+      importerNumber:
+        type: number
+      month:
+        type: string
+        example: MAY-2020
+      licenseNumber:
+        type: string
+      brokerName:
+        type: string
+  AverageClearanceTimeList:
+    type: array
+    items:
+      $ref: '#/definitions/AverageClearanceTimeListItem'
+  AverageClearanceTimeShipmentsListItem:
+    type: object
+    additionalProperties: false
+    properties:
+      importerNumber:
+        type: number
+      month:
+        type: string
+        example: MAY-2020
+      shipmentType:
+        type: string
+      shipmentNumber:
+        type: string
+  AverageClearanceTimeShipmentsList:
+    type: array
+    items:
+      $ref: '#/definitions/AverageClearanceTimeShipmentsListItem'
+  AverageClearanceTimeShipmentDetailsItem:
+    type: object
+    additionalProperties: false
+    properties:
+      month:
+        type: string
+        example: MAY-2020
+      portName:
+        type: string
+      importerNumber:
+        type: number
+      arImporterName:
+        type: string
+      shipmentType:
+        type: string
+      shipmentNumber:
+        type: string
+      averageClearanceDays:
+        type: string
+  AverageClearanceTimeShipmentDetails:
+    type: array
+    items:
+      $ref: '#/definitions/AverageClearanceTimeShipmentDetailsItem'
+  AverageClearanceTimeDetailsItem:
+    type: object
+    additionalProperties: false
+    properties:
+      month:
+        type: string
+        example: MAY-2020
+      portName:
+        type: string
+      importerNumber:
+        type: number
+      arImporterName:
+        type: string
+      licenseNumber:
+        type: string
+      brokerName:
+        type: string
+      averageClearanceDays:
+        type: string
+  AverageClearanceTimeDetails:
+    type: array
+    items:
+      $ref: '#/definitions/AverageClearanceTimeDetailsItem'
+paths:
+  '/{importer_number}/shipments/{shipment_number}/averageclearancetime':
+    parameters:
+      - name: importer_number
+        in: path
+        required: true
+        type: number
+      - name: shipment_number
+        in: path
+        required: true
+        type: string
+    get:
+      responses:
+        '200':
+          description: success
+          schema:
+            $ref: '#/definitions/AverageClearanceTimeShipmentDetails'
+        '400':
+          description: bad request
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '401':
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '404':
+          description: No resources match requested URI
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '405':
+          description: method not allowed
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '500':
+          description: internal error
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+      operationId: Average clearance time details per shipment
+      consumes: []
+      produces:
+        - application/json
+      parameters:
+        - name: month
+          in: query
+          required: true
+          type: string
+          enum:
+            - JAN
+            - FEB
+            - MAR
+            - APR
+            - MAY
+            - JUN
+            - JUL
+            - AUG
+            - SEP
+            - OCT
+            - NOV
+            - DEC
+        - name: year
+          in: query
+          required: true
+          type: integer
+  '/{importer_number}/brokers/{broker_lic_nbr}/averageclearancetime':
+    parameters:
+      - name: importer_number
+        in: path
+        required: true
+        type: number
+      - name: broker_lic_nbr
+        in: path
+        required: true
+        type: string
+    get:
+      responses:
+        '200':
+          description: success
+          schema:
+            $ref: '#/definitions/AverageClearanceTimeDetails'
+        '400':
+          description: bad request
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '401':
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '404':
+          description: No resources match requested URI
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '405':
+          description: method not allowed
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '500':
+          description: internal error
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+      operationId: Average clearance time details per broker
+      consumes: []
+      produces:
+        - application/json
+      parameters:
+        - name: month
+          in: query
+          required: true
+          type: string
+          enum:
+            - JAN
+            - FEB
+            - MAR
+            - APR
+            - MAY
+            - JUN
+            - JUL
+            - AUG
+            - SEP
+            - OCT
+            - NOV
+            - DEC
+        - name: year
+          in: query
+          required: true
+          type: integer
+  '/{importer_number}/shipments/averageclearancetime':
+    parameters:
+      - name: importer_number
+        in: path
+        required: true
+        type: number
+    get:
+      responses:
+        '200':
+          description: success
+          schema:
+            $ref: '#/definitions/AverageClearanceTimeShipmentsList'
+        '400':
+          description: bad request
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '401':
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '404':
+          description: No resources match requested URI
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '405':
+          description: method not allowed
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '500':
+          description: internal error
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+      operationId: List of shipments that are related to a specific importer
+      consumes: []
+      produces:
+        - application/json
+  '/{importer_number}/brokers/averageclearancetime':
+    parameters:
+      - name: importer_number
+        in: path
+        required: true
+        type: number
+    get:
+      responses:
+        '200':
+          description: success
+          schema:
+            $ref: '#/definitions/AverageClearanceTimeList'
+        '400':
+          description: bad request
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '401':
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '404':
+          description: No resources match requested URI
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '405':
+          description: method not allowed
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '500':
+          description: internal error
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+      operationId: List of Brokers who are related to a specific importer
+      consumes: []
+      produces:
+        - application/json
+host: sapis.fasah.sa
