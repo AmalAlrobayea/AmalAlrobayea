@@ -1,0 +1,178 @@
+swagger: '2.0'
+info:
+  title: Importer Expected Arrival Shipments API
+  x-ibm-name: importer-expected-arrival-shipments-api
+  version: 1.0.0
+  description: 'This API provides a list of expected shipments for specific time period and related to a particular Importer and also provides the details of expected shipment. E.g. Vessel Name, ETA, ...etc.'
+schemes:
+  - https
+basePath: /tabadul/fasahsb/api/v1/analytics/ieas/importer
+security:
+  - clientID: []
+    oAuth2:
+      - IMPRT
+      - Trader
+securityDefinitions:
+  oAuth2:
+    type: oauth2
+    description: The API is restricted by oAuth2 password grant
+    flow: password
+    x-ibm-oauth-provider: fasah-sb-identity-service-oauth-provider-v3
+    tokenUrl: 'https://sapis.fasah.sa/tabadul/fasahsb/oauth2/token/v3/jwt'
+    scopes:
+      Broker: Broker
+      Fasah: Fasah
+      GATEOPERATOR: GATEOPERATOR
+      IMPRT: Importer
+      PORT_CONTRACTOR: PORT_CONTRACTOR
+      SUPERBROKER: SUPERBROKER
+      Trader: Trader
+  clientSecret:
+    type: apiKey
+    name: X-Tabadul-Client-Secret
+    in: header
+    x-key-type: client_secret
+  clientID:
+    type: apiKey
+    in: header
+    name: X-Tabadul-Client-Id
+x-ibm-configuration:
+  cors:
+    enabled: true
+  type: rest
+  phase: realized
+  enforced: true
+  testable: true
+  application-authentication:
+    certificate: false
+  servers:
+    - url: 'https://sapis.fasah.sa/tabadul/fasahsb/api/v1/analytics/ieas/importer'
+      description: external sandbox for testing
+      type:
+        - Development
+definitions:
+  ShipmentDetails:
+    type: array
+    items:
+      $ref: '#/definitions/ShipmentDetailsItem'
+  DefaultFailureResonse:
+    type: object
+    additionalProperties: false
+    properties:
+      httpCode:
+        type: string
+      httpMessage:
+        type: string
+      moreInformation:
+        type: string
+  ShipmentDetailsItem:
+    type: object
+    additionalProperties: false
+    properties:
+      portName:
+        type: string
+      importerNumber:
+        type: number
+      arImporterName:
+        type: string
+      vesselName:
+        type: string
+      eta:
+        type: string
+        format: date
+      shipmentNumber:
+        type: string
+      shipmentType:
+        type: string
+      shippingLine:
+        type: string
+  ShipmentListItem:
+    type: object
+    additionalProperties: false
+    properties:
+      importerNumber:
+        type: number
+      shipmentNumber:
+        type: string
+  DistinctShipmentList:
+    type: array
+    items:
+      $ref: '#/definitions/ShipmentListItem'
+paths:
+  '/{importer_number}/shipments':
+    parameters:
+      - name: importer_number
+        in: path
+        required: true
+        type: number
+    get:
+      responses:
+        '200':
+          description: success
+          schema:
+            $ref: '#/definitions/DistinctShipmentList'
+        '400':
+          description: bad request
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '401':
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '404':
+          description: No resources match requested URI
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '405':
+          description: method not allowed
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '500':
+          description: internal error
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+      operationId: List of expected arrival shipments for an importer
+      consumes: []
+      produces:
+        - application/json
+  '/{importer_number}/shipments/{shipment_number}':
+    parameters:
+      - name: importer_number
+        in: path
+        required: true
+        type: number
+      - name: shipment_number
+        in: path
+        required: true
+        type: string
+    get:
+      responses:
+        '200':
+          description: success
+          schema:
+            $ref: '#/definitions/ShipmentDetails'
+        '400':
+          description: bad request
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '401':
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '404':
+          description: No resources match requested URI
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '405':
+          description: method not allowed
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '500':
+          description: internal error
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+      operationId: Details of an expected arrival shipment for an importer
+      consumes: []
+      produces:
+        - application/json
+host: sapis.fasah.sa
