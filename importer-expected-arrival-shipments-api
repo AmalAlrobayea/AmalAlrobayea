@@ -1,0 +1,283 @@
+swagger: '2.0'
+info:
+  title: Importer Expected Arrival Shipments API
+  x-ibm-name: importer-expected-arrival-shipments-api
+  version: 1.0.0
+  description: >-
+    This API provides a list of expected shipments for specific time period and
+    related to a particular Importer and also provides the details of expected
+    shipment. E.g. Vessel Name, ETA, ...etc.
+schemes:
+  - https
+basePath: /api/v1/analytics/ieas/importer
+security:
+  - clientID: []
+    oAuth2:
+      - IMPRT
+      - Trader
+securityDefinitions:
+  oAuth2:
+    type: oauth2
+    description: The API is restricted by oAuth2 password grant
+    flow: password
+    x-ibm-oauth-provider: fasah-sb-identity-service-oauth-provider-v3
+    tokenUrl: 'https://sapis.fasah.sa/tabadul/fasahsb/oauth2/token/v3/jwt'
+    scopes:
+      Broker: Broker
+      Fasah: Fasah
+      GATEOPERATOR: GATEOPERATOR
+      IMPRT: Importer
+      PORT_CONTRACTOR: PORT_CONTRACTOR
+      SUPERBROKER: SUPERBROKER
+      Trader: Trader
+  clientSecret:
+    type: apiKey
+    name: X-Tabadul-Client-Secret
+    in: header
+    x-key-type: client_secret
+  clientID:
+    type: apiKey
+    in: header
+    name: X-Tabadul-Client-Id
+x-ibm-configuration:
+  cors:
+    enabled: true
+  gateway: datapower-api-gateway
+  type: rest
+  phase: realized
+  enforced: true
+  testable: true
+  assembly:
+    execute:
+      - set-variable:
+          version: 2.0.0
+          title: set-token
+          actions:
+            - value: $(request.headers.Authorization)
+              add: message.headers.Token
+              type: string
+          description: Setting Token header for importer auth
+      - invoke:
+          version: 2.0.0
+          title: invoke importer auth
+          header-control:
+            type: blacklist
+            values:
+              - ^X-Tabadul-Client-Id$
+          parameter-control:
+            type: whitelist
+            values: []
+          timeout: 10
+          verb: GET
+          cache-response: no-cache
+          cache-ttl: 900
+          description: Valid importer api
+          target-url: $(importerValUrl)
+          stop-on-error:
+            - ConnectionError
+            - OperationError
+          output: importerValOut
+      - gatewayscript:
+          version: 2.0.0
+          title: Validate importer number
+          source: "var apim = require('apim');\r\nvar msgBody = apim.getvariable('importerValOut.body');\r\n\r\nconsole.debug('***Response Message from ImporterAuthAPI is: '+ msgBody.resultMessage);   \r\n\r\nvar inImporterNum = apim.getvariable('request.parameters.importer_number');\r\n//var recImporterNum = msgBody.object.importerName;\r\n//recImporterNum = recImporterNum.toString();\r\n    \r\n\r\n \r\n    \r\nif (!msgBody.successfull || msgBody.successfull != true || !msgBody.object.importerNumber || msgBody.object.importerNumber.toString()!= inImporterNum)\r\n\r\n{\r\n    console.debug('*******Importer unverified********');\r\n    apim.error('Input importer does not match token importer number', 401, 'Unauthorized', 'Unauthorized to access the resource');\r\n\r\n}\r\nelse\r\n{\r\n    \r\n    console.debug('***Input ImporterNumber is: '+ inImporterNum);\r\n    console.debug('***Token ImporterNumber is: '+ msgBody.object.importerNumber.toString());\r\n}\r\n"
+      - invoke:
+          title: invoke
+          version: 2.0.0
+          verb: keep
+          target-url: $(baseUrl)$(api.operation.path)
+          header-control:
+            type: blacklist
+            values: []
+          parameter-control:
+            type: blacklist
+            values: []
+          timeout: 18
+          username: $(userName)
+          password: $(password)
+          stop-on-error:
+            - ConnectionError
+            - OperationError
+    catch:
+      - errors:
+          - ConnectionError
+          - RuntimeError
+          - BadRequestError
+          - OperationError
+        execute:
+          - gatewayscript:
+              version: 2.0.0
+              title: gatewayscript
+              source: "var apim = require('apim');\r\nlet exception = apim.getError();\r\nvar tmp = {};\r\nvar code = exception.status.code;\r\n\r\nconsole.debug('***Exception occured in importerAPI***');\r\n\r\n\r\nif (code == 503){\r\n    tmp.httpCode = '503';\r\n    tmp.httpMessage = 'Service Temporarily Unavailable';\r\n    tmp.moreInformation = 'Service temporarily unavailable. Contact Fasah support';\r\n    context.message.statusCode = 503;\r\n    \r\n    console.debug('***Exception code 503');\r\n    console.debug('***Exception message Service Temporarily Unavailable');\r\n\r\nsession.output.write(tmp);\r\ncontext.message.header.set('Content-Type', \"application/json\");\r\ncontext.message.body.write(tmp);\r\n}\r\nelse\r\n{\r\n    var message = exception.message;\r\n\r\n   \r\n    console.debug('***Exception code '+ code);\r\n    console.debug('***Exception message '+ message);\r\n    \r\n     var msgBody = apim.getvariable('message.body');\r\n     \r\n     if(!msgBody || !msgBody.httpMessage){\r\n         \r\n        tmp.httpCode = code.toString();\r\n        tmp.httpMessage = exception.status.reason;\r\n        tmp.moreInformation = message;\r\n        context.message.statusCode = code;\r\n        \r\n        session.output.write(tmp);\r\n        context.message.header.set('Content-Type', \"application/json\");\r\n        context.message.body.write(tmp);\r\n     }\r\n     else{\r\n       console.debug('***httpMessage '+ msgBody.httpMessage);\r\n       //no need for exception body as http message already present\r\n     }\r\n}\r\n\r\n// session.output.write(tmp);\r\n// context.message.header.set('Content-Type', \"application/json\");\r\n// context.message.body.write(tmp);\r\n// }\r\n"
+  properties:
+    baseUrl:
+      value: >-
+        https://analytics-importerapis-ace.apps.ocp.fasah.sa/appc/analytics-importerapis/1.0.0/ieas
+      encoded: false
+    userName:
+      value: prod
+    password:
+      value: prod@1234
+    token-url:
+      value: 'https://apis.fasah.sa/tabadul/fasah/oauth2/token/v3/jwt'
+    importerValUrl:
+      value: 'https://prod.apps.ocp.fasah.sa/tdr/api/importer/current-importer/v2'
+  application-authentication:
+    certificate: false
+  catalogs:
+    fasahsb:
+      properties:
+        baseUrl: >-
+          https://analytics-importerapis-ace.apps.sit.ocp.devfasah.sa/appc/analytics-importerapis/1.0.0/ieas
+        userName: test
+        password: test@1234
+        token-url: 'https://sapis.fasah.sa/tabadul/fasahsb/oauth2/token/v3/jwt'
+        importerValUrl: >-
+          http://sit.apps.sit.kube.devfasah.sa/tdr/api/importer/current-importer/v2
+    fasahqa:
+      properties:
+        baseUrl: >-
+          https://analytics-importerapis-ace.apps.sit.ocp.devfasah.sa/appc/analytics-importerapis/1.0.0/ieas
+        userName: test
+        password: test@1234
+        token-url: 'https://tapis.fasah.sa/tabadul/fasahqa/oauth2/token/v3/jwt'
+        importerValUrl: >-
+          http://sit.apps.sit.kube.devfasah.sa/tdr/api/importer/current-importer/v2
+    fasahdev:
+      properties:
+        baseUrl: >-
+          https://analytics-importerapis-ace.apps.ocp.devfasah.sa/appc/analytics-importerapis/1.0.0/ieas
+        userName: test
+        password: test@1234
+        token-url: 'https://dapis.fasah.sa/tabadul/fasahdev/oauth2/token/v3/jwt'
+        importerValUrl: >-
+          http://dev.apps.dev.kube.devfasah.sa/tdr/api/importer/current-importer/v2
+  activity-log:
+    enabled: true
+    error-content: payload
+    success-content: payload
+definitions:
+  ShipmentDetails:
+    type: array
+    items:
+      $ref: '#/definitions/ShipmentDetailsItem'
+  DefaultFailureResonse:
+    type: object
+    additionalProperties: false
+    properties:
+      httpCode:
+        type: string
+      httpMessage:
+        type: string
+      moreInformation:
+        type: string
+  ShipmentDetailsItem:
+    type: object
+    additionalProperties: false
+    properties:
+      portName:
+        type: string
+      importerNumber:
+        type: number
+      arImporterName:
+        type: string
+      vesselName:
+        type: string
+      eta:
+        type: string
+        format: date
+      shipmentNumber:
+        type: string
+      shipmentType:
+        type: string
+      shippingLine:
+        type: string
+  ShipmentListItem:
+    type: object
+    additionalProperties: false
+    properties:
+      importerNumber:
+        type: number
+      shipmentNumber:
+        type: string
+  DistinctShipmentList:
+    type: array
+    items:
+      $ref: '#/definitions/ShipmentListItem'
+paths:
+  '/{importer_number}/shipments':
+    parameters:
+      - name: importer_number
+        in: path
+        required: true
+        type: number
+    get:
+      responses:
+        '200':
+          description: success
+          schema:
+            $ref: '#/definitions/DistinctShipmentList'
+        '400':
+          description: bad request
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '401':
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '404':
+          description: No resources match requested URI
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '405':
+          description: method not allowed
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '500':
+          description: internal error
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+      operationId: List of expected arrival shipments for an importer
+      consumes: []
+      produces:
+        - application/json
+  '/{importer_number}/shipments/{shipment_number}':
+    parameters:
+      - name: importer_number
+        in: path
+        required: true
+        type: number
+      - name: shipment_number
+        in: path
+        required: true
+        type: string
+    get:
+      responses:
+        '200':
+          description: success
+          schema:
+            $ref: '#/definitions/ShipmentDetails'
+        '400':
+          description: bad request
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '401':
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '404':
+          description: No resources match requested URI
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '405':
+          description: method not allowed
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+        '500':
+          description: internal error
+          schema:
+            $ref: '#/definitions/DefaultFailureResonse'
+      operationId: Details of an expected arrival shipment for an importer
+      consumes: []
+      produces:
+        - application/json
